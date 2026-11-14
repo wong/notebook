@@ -40,7 +40,7 @@ svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:
 .btn:disabled{opacity:.55;cursor:default}
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:0;background:transparent;border-radius:9px;cursor:pointer;color:var(--text)}
 .icon-btn:hover{background:var(--hover)}
-input[type=text],input[type=password],input[type=search],input[type=datetime-local],input:not([type]),textarea{width:100%;padding:9px 11px;border:1px solid var(--border);background:var(--panel);border-radius:9px;outline:none}
+input[type=text],input[type=password],input[type=search],input[type=datetime-local],input:not([type]),textarea,select{width:100%;padding:9px 11px;border:1px solid var(--border);background:var(--panel);border-radius:9px;outline:none}
 input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
 label{display:block;font-size:13px;color:var(--muted)}
 label>input{margin-top:4px;color:var(--text)}
@@ -246,8 +246,10 @@ button.chip{cursor:pointer}
         <div id="side-folders"></div>
         <div class="side-h">标签</div>
         <div id="side-tags" class="tag-cloud"></div>
-        <div class="side-h">年份归档</div>
+        <div class="side-h">年份</div>
         <div id="side-years"></div>
+        <div class="side-h" id="side-arch-h">历史归档</div>
+        <div id="side-archives"></div>
       </nav>
       <div class="capacity" title="按当前全部笔记实时估算重新加密后完整 index.html 的体积">
         <div class="cap-label"><span>容量健康度</span><span id="cap-text">计算中…</span></div>
@@ -335,6 +337,12 @@ button.chip{cursor:pointer}
           <div class="status" id="imp-status"></div>
           <div class="note-box">手机浏览器不支持选择文件夹时，可用第二个按钮同时多选 .md 文件和图片文件，图片会按文件名自动匹配（此时笔记统一归入「默认笔记本」）。</div>
         </div>
+        <div class="sec" id="arch-sec">
+          <h3>按年份归档（容量自动扩展）</h3>
+          <p class="desc">主文件预计超过 13.5 MB 时，每次发布前会<b>自动</b>把最早年份（不含今年）的笔记移到独立的 <code>archive-年份.html</code>，直到主文件降到 10 MB 以下。每个归档都是完整、可单独打开的加密单文件，与主文件放在同一目录、使用同一主密码；从左侧「历史归档」点开会自动解锁。也可以在这里手动归档某一年。</p>
+          <div class="row"><select id="arch-year" style="width:auto;min-width:150px"></select><button class="btn" id="arch-gh">归档并发布到 GitHub</button><button class="btn" id="arch-dl">归档并下载文件</button></div>
+          <div class="status" id="arch-status"></div>
+        </div>
         <div class="sec">
           <h3>导出明文</h3>
           <p class="desc">把全部笔记（含内嵌图片）导出为一个明文 Markdown 文件，保证数据永远可以迁出。注意：导出文件未加密，请妥善保管。</p>
@@ -348,7 +356,7 @@ button.chip{cursor:pointer}
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <input type="file" id="img-input" accept="image/*" multiple hidden>
 
-<script type="application/json" id="encrypted-vault">{"format":"encnb-1","title":"Encrypted Notebook","kdf":"PBKDF2-SHA256","iter":100000,"cipher":"AES-256-GCM","compression":"gzip","salt":"lPgrD7hb3NinQ6/r2kXUVg==","iv":"YhV4OiYR0YNdu7xY","savedAt":1,"data":"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"}</script>
+<script type="application/json" id="encrypted-vault">{"format":"encnb-1","title":"Encrypted Notebook","kdf":"PBKDF2-SHA256","iter":100000,"cipher":"AES-256-GCM","compression":"gzip","salt":"fWhUAKBKVEM6oZ2AK+DkQQ==","iv":"hZSli77ShZMPTV6T","savedAt":1,"data":"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"}</script>
 <script>
 (function () {
 'use strict';
@@ -358,8 +366,12 @@ var PRISTINE_SNAPSHOT = '<!DOCTYPE html>\n' + document.documentElement.outerHTML
 
 var ITER = 100000;
 var SIZE_LIMIT = 15 * 1024 * 1024;
+var SPLIT_TRIGGER = 13.5 * 1024 * 1024;   /* 主文件预计超过 13.5 MB 时，发布前自动按年份归档 */
+var SPLIT_TARGET = 10 * 1024 * 1024;      /* 归档到主文件降到 10 MB 以下为止 */
 var DEFAULT_PASSWORD = '123456';
-var PATH_KEY = location.pathname || '/';
+function normPath(p) { return String(p || '/').replace(/index\.html?$/i, '') || '/'; }
+var PATH_KEY = normPath(location.pathname);
+var ARCHIVE_NAME_RE = /^archive-\d{4}(?:-\d+)?\.html$/;
 var LS_THEME = 'encnb:theme';
 var LS_GH = 'encnb:github';
 var LS_DRAFT = 'encnb:draft:' + PATH_KEY;
@@ -416,7 +428,13 @@ var DEFAULT_GUIDE = [
 '',
 '---',
 '',
-'## 六、技术细节',
+'## 六、容量与自动归档',
+'- 左下角容量条显示整个文件的预计体积，安全上限 15 MB。文字很省空间，主要占用来自图片（每张约 100~200 KB）。',
+'- 主文件预计超过 13.5 MB 时，每次发布前会**自动**把最早年份（不含今年）的笔记移到独立的 `archive-年份.html`，直到主文件降到 10 MB 以下。',
+'- 每个归档都是完整、可单独打开的加密文件，与 `index.html` 放在同一目录，使用同一主密码；在左侧「历史归档」点开会自动解锁。',
+'- 注意：搜索只在当前打开的文件内进行；离线备份时要连同所有 `archive-*.html` 一起保存（GitHub 仓库页面 Code → Download ZIP）。',
+'',
+'## 七、技术细节',
 '1. 加密：PBKDF2-SHA256 迭代 100,000 次派生 256 位密钥 → AES-GCM；每次保存都使用新的随机 IV，修改密码时生成新的随机 Salt。',
 '2. 压缩：先用浏览器原生 gzip（CompressionStream）压缩，再加密并转为 Base64，存放在页面内的 `encrypted-vault` 标签中。',
 '3. 零外部依赖：页面不加载任何 CDN、字体、脚本或图标库，10 年后依旧可以直接打开。',
@@ -525,9 +543,18 @@ function normalizeData(d) {
         created: +n.created || now, updated: +n.updated || +n.created || now, body: String(n.body || '')
       };
     }),
-    resources: d.resources && typeof d.resources === 'object' ? d.resources : {}
+    resources: d.resources && typeof d.resources === 'object' ? d.resources : {},
+    meta: d.meta && d.meta.kind === 'archive' && ARCHIVE_NAME_RE.test(d.meta.selfFile || '')
+      ? { kind: 'archive', year: +d.meta.year || 0, selfFile: d.meta.selfFile, mainFile: String(d.meta.mainFile || 'index.html') }
+      : null,
+    archives: (Array.isArray(d.archives) ? d.archives : []).filter(function (a) {
+      return a && ARCHIVE_NAME_RE.test(a.file || '') && a.key && a.salt;
+    }).map(function (a) {
+      return { file: a.file, year: +a.year || 0, count: +a.count || 0, salt: String(a.salt), key: String(a.key), createdAt: +a.createdAt || 0 };
+    })
   };
 }
+function isArchive() { return !!(S.data && S.data.meta && S.data.meta.kind === 'archive'); }
 function defaultData() {
   var now = Date.now();
   return { version: 1, resources: {}, notes: [{ id: uid(), title: '使用与备份指南', folder: '默认笔记本', tags: ['指南'], created: now, updated: now, body: DEFAULT_GUIDE }] };
@@ -771,27 +798,114 @@ async function buildHtml(vault) {
   t = t.replace(/(<h1 id="lock-title"[^>]*>)[\s\S]*?(<\/h1>)/, function (m, a, b) { return a + esc(vault.title) + b; });
   return t;
 }
-function referencedResources(extraText) {
+function refsFor(notes, resources, extraText) {
   var refs = {}, re = /img:([\w-]+)/g, m;
-  var texts = S.data.notes.map(function (n) { return n.body; });
+  var texts = notes.map(function (n) { return n.body; });
   if (extraText) texts.push(extraText);
   texts.forEach(function (t) { re.lastIndex = 0; while ((m = re.exec(t))) refs[m[1]] = 1; });
   var out = {};
-  Object.keys(S.data.resources).forEach(function (id) { if (refs[id]) out[id] = S.data.resources[id]; });
+  Object.keys(resources).forEach(function (id) { if (refs[id]) out[id] = resources[id]; });
   return out;
 }
+function referencedResources(extraText) { return refsFor(S.data.notes, S.data.resources, extraText); }
 function editorText() { var ta = $('#ed-body'); return ta ? ta.value : ''; }
-function snapshotData() { return { version: 1, notes: S.data.notes, resources: referencedResources(editorText()) }; }
-async function buildCurrentHtml() {
-  var vault = await sealVault(snapshotData(), S.key, S.salt, S.title);
-  var html = await buildHtml(vault);
+function packData(notes, resources, meta, archives) {
+  var d = { version: 1, notes: notes, resources: resources };
+  if (meta) d.meta = meta;
+  if (archives && archives.length) d.archives = archives;
+  return d;
+}
+function snapshotData() { return packData(S.data.notes, referencedResources(editorText()), S.data.meta, S.data.archives); }
+function mainFileName() { return decodeURIComponent(location.pathname.split('/').pop() || '') || 'index.html'; }
+function noteYear(n) { return new Date(n.created).getFullYear(); }
+function assertNoToken(html) {
   var g = loadGh();
   if (g.token && g.token.length >= 8 && html.indexOf(g.token) >= 0) throw new Error('安全检查失败：生成的 HTML 中检测到 Token，已中止');
-  var size = enc.encode(html).length;
-  if (size > SIZE_LIMIT && !confirm('生成的文件约 ' + fmtMB(size) + ' MB，已超过 15 MB 安全上限，部分平台/手机可能无法打开或上传。仍然继续？')) throw new Error('已取消');
-  return { html: html, vault: vault, size: size };
 }
-function afterExport() { S.dirty = false; updateDirtyUI(); }
+
+/* 按年份自动归档：返回不修改当前状态的拆分方案；发布成功后再 commitRelease 应用 */
+async function planSplit(forceYear) {
+  if (isArchive()) return null;
+  var notes = S.data.notes.slice();
+  var registry = S.data.archives.slice();
+  var mainRes = refsFor(notes, S.data.resources, '');
+  var size = await estimateSize(packData(notes, mainRes, null, registry));
+  if (!forceYear && size <= SPLIT_TRIGGER) return null;
+  var curYear = new Date().getFullYear();
+  var years = [];
+  notes.forEach(function (n) { var y = noteYear(n); if (years.indexOf(y) < 0) years.push(y); });
+  years.sort(function (a, b) { return a - b; });
+  years = forceYear ? years.filter(function (y) { return y === forceYear; }) : years.filter(function (y) { return y < curYear; });
+  var keyB64 = await exportKey(S.key), archives = [], now = Date.now();
+  for (var i = 0; i < years.length; i++) {
+    if (!forceYear && size <= SPLIT_TARGET) break;
+    var y = years[i];
+    var moving = notes.filter(function (n) { return noteYear(n) === y; });
+    notes = notes.filter(function (n) { return noteYear(n) !== y; });
+    var file = 'archive-' + y + '.html', k = 2;
+    var taken = function (f) { return registry.some(function (a) { return a.file === f; }); };
+    while (taken(file)) file = 'archive-' + y + '-' + (k++) + '.html';
+    var meta = { kind: 'archive', year: y, selfFile: file, mainFile: mainFileName() };
+    archives.push({ file: file, year: y, count: moving.length, data: packData(moving, refsFor(moving, S.data.resources, ''), meta, null) });
+    registry.push({ file: file, year: y, count: moving.length, salt: S.salt, key: keyB64, createdAt: now });
+    mainRes = refsFor(notes, S.data.resources, '');
+    size = await estimateSize(packData(notes, mainRes, null, registry));
+  }
+  if (!archives.length) return { none: true, size: size };
+  return { notes: notes, resources: mainRes, archives: archives, registry: registry, size: size };
+}
+/* 生成一次发布所需的全部文件（主文件 + 新归档文件），不修改当前状态 */
+async function buildRelease(forceYear) {
+  var plan = await planSplit(forceYear);
+  if (forceYear && (!plan || plan.none)) throw new Error('没有可归档的笔记');
+  var files = [];
+  if (plan && !plan.none) {
+    for (var i = 0; i < plan.archives.length; i++) {
+      var a = plan.archives[i];
+      var av = await sealVault(a.data, S.key, S.salt, S.title + ' · ' + a.year + ' 归档');
+      var ah = await buildHtml(av);
+      assertNoToken(ah);
+      files.push({ file: a.file, html: ah, size: enc.encode(ah).length, year: a.year, count: a.count });
+    }
+  }
+  var mainData = plan && !plan.none
+    ? packData(plan.notes, plan.resources, null, plan.registry)
+    : snapshotData();
+  return { plan: plan && !plan.none ? plan : null, mainData: mainData, archiveFiles: files };
+}
+async function sealMain(rel) {
+  var vault = await sealVault(rel.mainData, S.key, S.salt, S.title);
+  var html = await buildHtml(vault);
+  assertNoToken(html);
+  var size = enc.encode(html).length;
+  if (size > SIZE_LIMIT && !confirm('主文件约 ' + fmtMB(size) + ' MB，超过 15 MB 安全上限' + (isArchive() ? '' : '（今年的笔记无法再拆分到归档）') + '，部分平台/手机可能无法打开或上传。仍然继续？')) throw new Error('已取消');
+  rel.vault = vault; rel.html = html; rel.size = size;
+  return rel;
+}
+function commitRelease(rel) {
+  if (rel.mainData.archives) S.data.archives = rel.mainData.archives;
+  if (rel.plan) {
+    var moved = {};
+    rel.plan.archives.forEach(function (a) { a.data.notes.forEach(function (n) { moved[n.id] = 1; }); });
+    S.data.notes = S.data.notes.filter(function (n) { return !moved[n.id]; });
+    S.data.resources = referencedResources('');
+    if (S.currentId && moved[S.currentId]) S.currentId = null;
+    renderAll();
+  }
+  afterExport(rel.vault);
+}
+function afterExport(vault) {
+  S.dirty = false; updateDirtyUI();
+  if (vault) {
+    var v = Object.assign({}, vault, { draft: true, published: true });
+    if (!lsSet(LS_DRAFT, JSON.stringify(v))) lsDel(LS_DRAFT);
+  }
+  scheduleSize();
+}
+function releaseSummary(rel) {
+  if (!rel.archiveFiles.length) return '';
+  return '已自动归档：' + rel.archiveFiles.map(function (f) { return f.year + ' 年 ' + f.count + ' 篇 → ' + f.file; }).join('；') + '。';
+}
 
 /* ---------------- 会话 / 草稿 ---------------- */
 async function saveSession() {
@@ -804,7 +918,7 @@ async function saveDraftNow() {
   clearTimeout(draftTimer);
   if (!S.key || !S.data || !S.dirty) return;
   try {
-    var v = await sealVault({ version: 1, notes: S.data.notes, resources: referencedResources(editorText()) }, S.key, S.salt, S.title);
+    var v = await sealVault(snapshotData(), S.key, S.salt, S.title);
     v.draft = true;
     if (!lsSet(LS_DRAFT, JSON.stringify(v)) && !draftWarned) {
       draftWarned = true;
@@ -818,23 +932,33 @@ function updateDirtyUI() { $('#dirty-flag').hidden = !S.dirty; }
 /* ---------------- 容量估算 ---------------- */
 var sizeTimer = null;
 function scheduleSize() { clearTimeout(sizeTimer); sizeTimer = setTimeout(updateSize, 800); }
+var TEMPLATE_BASE = 0;
+async function estimateSize(data) {
+  if (!TEMPLATE_BASE) TEMPLATE_BASE = enc.encode((await getTemplate()).replace(VAULT_RE, '$1$2')).length;
+  var bytes = enc.encode(JSON.stringify(data));
+  if (HAS_GZIP) bytes = await gzip(bytes);
+  return TEMPLATE_BASE + Math.ceil((bytes.length + 16) / 3) * 4 + 360 + enc.encode(S.title).length * 2;
+}
 async function updateSize() {
   if (!S.data) return;
   try {
-    var tpl = await getTemplate();
-    var base = enc.encode(tpl.replace(VAULT_RE, '$1$2')).length;
-    var bytes = enc.encode(JSON.stringify(snapshotData()));
-    if (HAS_GZIP) bytes = await gzip(bytes);
-    var total = base + Math.ceil((bytes.length + 16) / 3) * 4 + 360 + enc.encode(S.title).length * 2;
+    var total = await estimateSize(snapshotData());
     var pct = Math.min(100, total / SIZE_LIMIT * 100);
     var fill = $('#cap-fill');
     fill.style.width = Math.max(1, pct) + '%';
     fill.className = pct > 90 ? 'bad' : pct > 70 ? 'warn' : '';
-    $('#cap-text').textContent = '已用 ' + fmtMB(total) + ' MB / 安全上限 15 MB';
+    var t = '已用 ' + fmtMB(total) + ' MB / 安全上限 15 MB';
+    if (!isArchive() && total > SPLIT_TRIGGER) t += ' · 发布时将自动按年份归档';
+    $('#cap-text').textContent = t;
   } catch (e) { $('#cap-text').textContent = '无法估算'; }
 }
 
 /* ---------------- 解锁 ---------------- */
+function applyDraftFlags(d) {
+  if (d.title) S.title = d.title;
+  if (d.published) { S.dirty = false; S.fromDraft = null; }   /* 刚发布、线上尚未刷新的版本 */
+  else { S.dirty = true; S.fromDraft = d; }
+}
 async function unlock(pw) {
   var v = S.vault, draft = loadDraft();
   var data = null, key = null, salt = null, fromDraft = null;
@@ -855,7 +979,7 @@ async function unlock(pw) {
   }
   if (!data) return false;
   S.key = key; S.salt = salt; S.data = data; S.weak = pw === DEFAULT_PASSWORD;
-  if (fromDraft) { S.dirty = true; S.fromDraft = fromDraft; if (fromDraft.title) S.title = fromDraft.title; }
+  if (fromDraft) { applyDraftFlags(fromDraft); }
   await saveSession();
   return true;
 }
@@ -870,7 +994,7 @@ async function restoreSession() {
     }
     if (!data) { ssDel(SS_KEY); return false; }
     S.key = key; S.salt = o.salt; S.data = data; S.weak = !!o.weak;
-    if (fromDraft) { S.dirty = true; S.fromDraft = fromDraft; if (fromDraft.title) S.title = fromDraft.title; }
+    if (fromDraft) { applyDraftFlags(fromDraft); }
     return true;
   } catch (e) { ssDel(SS_KEY); return false; }
 }
@@ -898,6 +1022,7 @@ function enterApp() {
 function renderBanners() {
   var h = '';
   if (S.weak) h += '<div class="banner"><span>⚠️ 你仍在使用默认密码 123456，任何人都能解开这个笔记本。请在写入真实内容前尽快修改主密码。</span><button class="btn" data-banner="pw">立即修改</button></div>';
+  if (isArchive()) h += '<div class="banner info"><span>📦 这是「' + S.data.meta.year + ' 年」归档文件（' + esc(S.data.meta.selfFile) + '），只包含该年的笔记，搜索也只在本文件内进行。可以照常编辑和发布。</span><button class="btn" data-open-main>返回主笔记本</button></div>';
   if (S.fromDraft) h += '<div class="banner info"><span>已从本机加密草稿恢复未发布的修改（' + esc(fmtDT(S.fromDraft.savedAt)) + '），记得「加密并发布」或下载新版文件。</span><button class="btn" data-banner="close-draft">知道了</button></div>';
   $('#banners').innerHTML = h;
 }
@@ -963,6 +1088,34 @@ function renderSidebar() {
       '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>' +
       '<span class="label">' + y + ' 年</span><span class="count">' + years[y] + '</span></button>';
   }).join('') || '<div class="side-empty">暂无</div>';
+  // 历史归档
+  var ah = '';
+  if (isArchive()) {
+    $('#side-arch-h').textContent = '本文件是归档';
+    ah = '<button class="side-item" data-open-main><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span class="label">返回主笔记本</span></button>';
+  } else {
+    $('#side-arch-h').textContent = '历史归档';
+    ah = S.data.archives.slice().sort(function (a, b) { return b.year - a.year || (a.file < b.file ? -1 : 1); }).map(function (a) {
+      return '<button class="side-item" data-open-archive="' + esc(a.file) + '" title="' + esc(a.file) + '">' +
+        '<svg viewBox="0 0 24 24"><path d="M3 4h18v4H3z"/><path d="M5 8v12h14V8M10 12h4"/></svg>' +
+        '<span class="label">' + a.year + ' 年归档' + (/^archive-\d{4}-\d+\.html$/.test(a.file) ? '（' + a.file.replace(/^archive-\d{4}-|\.html$/g, '') + '）' : '') + '</span><span class="count">' + a.count + '</span></button>';
+    }).join('') || '<div class="side-empty">暂无（容量接近上限时自动生成）</div>';
+  }
+  $('#side-archives').innerHTML = ah;
+}
+async function openArchive(file) {
+  var a = S.data.archives.filter(function (x) { return x.file === file; })[0];
+  if (!a || !ARCHIVE_NAME_RE.test(file)) return;
+  if (S.editing) { toast('请先保存或取消正在编辑的笔记', 'err'); return; }
+  await saveDraftNow();
+  var url = new URL(file, location.href);
+  ssSet('encnb:session:' + normPath(url.pathname), JSON.stringify({ salt: a.salt, key: a.key, weak: false }));
+  location.href = url.href;
+}
+async function openMain() {
+  if (S.editing) { toast('请先保存或取消正在编辑的笔记', 'err'); return; }
+  await saveDraftNow();
+  location.href = new URL(S.data.meta.mainFile || 'index.html', location.href).href;
 }
 
 function renderList() {
@@ -1330,35 +1483,108 @@ async function ghGetSha(base, path, branch, headers) {
   if (r.status === 404) return null;
   throw new Error(await ghErr(r));
 }
-async function publishGithub() {
-  if (S.busy) return;
+function ghCtx() {
   var g = loadGh();
-  if (!g.owner || !g.repo || !g.token) { openSettings('publish'); toast('请先填写并保存 GitHub 配置', 'err'); return; }
+  return {
+    g: g, branch: g.branch || 'main', mainPath: (g.path || 'index.html').replace(/^\/+/, ''),
+    base: 'https://api.github.com/repos/' + encodeURIComponent(g.owner) + '/' + encodeURIComponent(g.repo) + '/contents/',
+    headers: { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + g.token, 'X-GitHub-Api-Version': '2022-11-28' }
+  };
+}
+function siblingPath(mainPath, file) { var i = mainPath.lastIndexOf('/'); return (i >= 0 ? mainPath.slice(0, i + 1) : '') + file; }
+function selfPath(ctx) { return isArchive() ? siblingPath(ctx.mainPath, S.data.meta.selfFile) : ctx.mainPath; }
+async function ghPut(ctx, path, html, message) {
+  var sha = await ghGetSha(ctx.base, path, ctx.branch, ctx.headers);
+  var body = { message: message, content: bytesToB64(enc.encode(html)), branch: ctx.branch };
+  if (sha) body.sha = sha;
+  var r = await fetch(ctx.base + encPath(path), {
+    method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, ctx.headers), body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(path + '：' + await ghErr(r));
+}
+async function ghGetRaw(ctx, path) {
+  var r = await fetch(ctx.base + encPath(path) + '?ref=' + encodeURIComponent(ctx.branch), {
+    headers: Object.assign({}, ctx.headers, { 'Accept': 'application/vnd.github.raw' }), cache: 'no-store'
+  });
+  if (!r.ok) throw new Error(path + '：' + await ghErr(r));
+  return r.text();
+}
+/* 修改主密码后，把旧归档用新密码重新加密（需要 GitHub 通道读取线上归档） */
+async function rekeyArchives(ctx, registry, st) {
+  var done = 0, failed = [], keyB64 = await exportKey(S.key);
+  for (var i = 0; i < registry.length; i++) {
+    var a = registry[i];
+    if (a.salt === S.salt) continue;
+    try {
+      st.textContent = '正在用新密码重新加密归档 ' + a.file + '…';
+      var src = await ghGetRaw(ctx, siblingPath(ctx.mainPath, a.file));
+      var m = VAULT_RE.exec(src);
+      if (!m) throw new Error('找不到密文');
+      var json = src.slice(m.index + m[1].length, m.index + m[0].length - m[2].length);
+      var v = JSON.parse(json);
+      var data = await openVault(v, await importRawKey(a.key));
+      var nv = await sealVault(data, S.key, S.salt, v.title || (S.title + ' · ' + a.year + ' 归档'));
+      var html = await buildHtml(nv);
+      assertNoToken(html);
+      await ghPut(ctx, siblingPath(ctx.mainPath, a.file), html, 'notebook: re-encrypt ' + a.file);
+      a.salt = S.salt; a.key = keyB64; a.count = data.notes.length;
+      done++;
+    } catch (e) { failed.push(a.file); }
+  }
+  return { done: done, failed: failed };
+}
+async function publishGithub(forceYear) {
+  if (S.busy) return;
+  var ctx = ghCtx();
+  if (!ctx.g.owner || !ctx.g.repo || !ctx.g.token) { openSettings('publish'); toast('请先填写并保存 GitHub 配置', 'err'); return; }
   if (S.editing) { toast('请先保存或取消正在编辑的笔记', 'err'); return; }
   setBusy(true);
-  var st = $('#gh-status');
+  var st = $('#gh-status'), stamp = new Date().toISOString();
   try {
     st.textContent = '正在加密…';
-    var built = await buildCurrentHtml();
-    var branch = g.branch || 'main', path = (g.path || 'index.html').replace(/^\/+/, '');
-    var base = 'https://api.github.com/repos/' + encodeURIComponent(g.owner) + '/' + encodeURIComponent(g.repo) + '/contents/';
-    var headers = { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + g.token, 'X-GitHub-Api-Version': '2022-11-28' };
-    st.textContent = '正在获取最新 sha…';
-    var sha = await ghGetSha(base, path, branch, headers);
-    st.textContent = '正在上传 ' + fmtMB(built.size) + ' MB…';
-    var body = { message: 'notebook: update ' + new Date().toISOString(), content: bytesToB64(enc.encode(built.html)), branch: branch };
-    if (sha) body.sha = sha;
-    var r = await fetch(base + encPath(path), {
-      method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, headers), body: JSON.stringify(body)
-    });
-    if (!r.ok) throw new Error(await ghErr(r));
-    afterExport();
-    st.textContent = '发布成功 ' + fmtDT(Date.now()) + '，GitHub Pages 通常 1~2 分钟内生效。';
-    toast('发布成功！GitHub Pages 通常 1~2 分钟内生效', 'ok', 5000);
+    var rel = await buildRelease(forceYear);
+    for (var i = 0; i < rel.archiveFiles.length; i++) {
+      var f = rel.archiveFiles[i];
+      st.textContent = '正在上传归档 ' + f.file + '（' + fmtMB(f.size) + ' MB）…';
+      await ghPut(ctx, siblingPath(ctx.mainPath, f.file), f.html, 'notebook: archive ' + f.year + ' → ' + f.file);
+    }
+    var rk = { done: 0, failed: [] };
+    if (!isArchive() && rel.mainData.archives && rel.mainData.archives.some(function (a) { return a.salt !== S.salt; })) {
+      rel.mainData.archives = rel.mainData.archives.map(function (a) { return Object.assign({}, a); });
+      rk = await rekeyArchives(ctx, rel.mainData.archives, st);
+    }
+    await sealMain(rel);
+    st.textContent = '正在上传 ' + fmtMB(rel.size) + ' MB…';
+    await ghPut(ctx, selfPath(ctx), rel.html, 'notebook: update ' + stamp);
+    commitRelease(rel);
+    var msg = '发布成功 ' + fmtDT(Date.now()) + '，GitHub Pages 通常 1~2 分钟内生效。' + releaseSummary(rel) +
+      (rk.done ? '已用新密码重新加密 ' + rk.done + ' 个归档。' : '') +
+      (rk.failed.length ? '⚠️ 以下归档暂未换新密码（从主笔记本打开仍可自动解锁）：' + rk.failed.join('、') : '');
+    st.textContent = msg;
+    toast(rel.archiveFiles.length ? '发布成功，并自动归档了 ' + rel.archiveFiles.length + ' 个年份' : '发布成功！GitHub Pages 通常 1~2 分钟内生效', 'ok', 6000);
   } catch (e) {
     st.textContent = '发布失败：' + e.message;
     toast('发布失败：' + e.message, 'err', 9000);
   } finally { setBusy(false); }
+}
+async function downloadRelease(forceYear) {
+  var st = $('#out-status');
+  if (S.editing) { st.textContent = '请先保存或取消正在编辑的笔记'; return; }
+  try {
+    st.textContent = '正在加密…';
+    var rel = await buildRelease(forceYear);
+    await sealMain(rel);
+    for (var i = 0; i < rel.archiveFiles.length; i++) {
+      downloadBlob(rel.archiveFiles[i].html, rel.archiveFiles[i].file, 'text/html;charset=utf-8');
+      await sleep(600);
+    }
+    var mainName = isArchive() ? S.data.meta.selfFile : mainFileName();
+    downloadBlob(rel.html, mainName, 'text/html;charset=utf-8');
+    commitRelease(rel);
+    var names = rel.archiveFiles.map(function (f) { return f.file; }).concat([mainName]);
+    st.textContent = '✓ 已生成 ' + names.join('、') + '（主文件 ' + fmtMB(rel.size) + ' MB）。' + releaseSummary(rel) +
+      (rel.archiveFiles.length ? '请把这些文件全部上传到同一个目录，缺一个就打不开对应年份的归档。' : '');
+  } catch (e) { st.textContent = '失败：' + e.message; }
 }
 function setBusy(b) {
   S.busy = b;
@@ -1378,6 +1604,16 @@ function openSettings(tab) {
   $('#gh-token').placeholder = g.token ? '已保存在本机（留空保持不变）' : 'ghp_… 或 github_pat_…';
   ['#pw-cur', '#pw-new', '#pw-new2'].forEach(function (s) { $(s).value = ''; });
   $('#pw-status').textContent = '';
+  var sec = $('#arch-sec');
+  sec.hidden = isArchive();
+  if (!isArchive()) {
+    var cy = new Date().getFullYear(), cnt = {};
+    S.data.notes.forEach(function (n) { var y = noteYear(n); if (y < cy) cnt[y] = (cnt[y] || 0) + 1; });
+    var ys = Object.keys(cnt).sort();
+    $('#arch-year').innerHTML = ys.map(function (y) { return '<option value="' + y + '">' + y + ' 年（' + cnt[y] + ' 篇）</option>'; }).join('') || '<option value="">没有可归档的年份（今年的笔记不归档）</option>';
+    $('#arch-gh').disabled = $('#arch-dl').disabled = !ys.length;
+    $('#arch-status').textContent = S.data.archives.length ? '已有归档：' + S.data.archives.map(function (a) { return a.file; }).join('、') : '';
+  }
   switchTab(tab || 'general');
   $('#settings').hidden = false;
 }
@@ -1388,6 +1624,7 @@ function switchTab(tab) {
 }
 async function changePassword() {
   var st = $('#pw-status'), cur = $('#pw-cur').value, nw = $('#pw-new').value, nw2 = $('#pw-new2').value;
+  if (isArchive()) { st.textContent = '这是归档文件，请回到主笔记本修改主密码；归档会在主笔记本下一次 GitHub 发布时自动换成新密码。'; return; }
   if (nw.length < 8) { st.textContent = '新密码至少 8 位（建议使用更长的短语）'; return; }
   if (nw !== nw2) { st.textContent = '两次输入的新密码不一致'; return; }
   if (nw === DEFAULT_PASSWORD) { st.textContent = '不能使用默认密码'; return; }
@@ -1446,7 +1683,7 @@ function bind() {
     location.reload();
   });
   $('#btn-settings').addEventListener('click', function () { openSettings(); });
-  $('#btn-publish').addEventListener('click', publishGithub);
+  $('#btn-publish').addEventListener('click', function () { publishGithub(); });
   $('#btn-new').addEventListener('click', function () {
     if (S.editing && editorChanged() && !confirm('放弃当前未保存的修改并新建笔记？')) return;
     startEdit(null);
@@ -1462,6 +1699,9 @@ function bind() {
     var t = ev.target.closest('[data-ftype]');
     if (t && !$('#app').hidden) { setFilter(t.getAttribute('data-ftype'), t.getAttribute('data-fval')); return; }
     if (ev.target.closest('[data-clear-filter]')) { S.query = ''; $('#search').value = ''; setFilter('all'); return; }
+    var oa = ev.target.closest('[data-open-archive]');
+    if (oa) { openArchive(oa.getAttribute('data-open-archive')); return; }
+    if (ev.target.closest('[data-open-main]')) { openMain(); return; }
     var bn = ev.target.closest('[data-banner]');
     if (bn) {
       var a = bn.getAttribute('data-banner');
@@ -1561,28 +1801,20 @@ function bind() {
     if (!confirm('清除本设备保存的 GitHub 配置和 Token？')) return;
     lsDel(LS_GH); openSettings('publish'); $('#gh-status').textContent = '已清除';
   });
-  $('#gh-publish').addEventListener('click', publishGithub);
+  $('#gh-publish').addEventListener('click', function () { publishGithub(); });
   $('#out-copy').addEventListener('click', async function () {
     var st = $('#out-status');
     if (S.editing) { st.textContent = '请先保存或取消正在编辑的笔记'; return; }
     try {
       st.textContent = '正在加密…';
-      var b = await buildCurrentHtml();
-      if (await copyText(b.html)) { afterExport(); st.textContent = '✓ 已复制完整 HTML（' + fmtMB(b.size) + ' MB），请粘贴覆盖 GitHub 上的 index.html'; }
+      var rel = await buildRelease();
+      if (rel.archiveFiles.length) { st.textContent = '本次需要自动按年份归档、会生成多个文件，复制方式只能处理一个文件。请改用「下载」或 GitHub 一键发布。'; return; }
+      await sealMain(rel);
+      if (await copyText(rel.html)) { commitRelease(rel); st.textContent = '✓ 已复制完整 HTML（' + fmtMB(rel.size) + ' MB），请粘贴覆盖 GitHub 上的 ' + (isArchive() ? S.data.meta.selfFile : 'index.html'); }
       else st.textContent = '复制失败（浏览器限制），请改用「下载新版 index.html」';
     } catch (e) { st.textContent = '失败：' + e.message; }
   });
-  $('#out-download').addEventListener('click', async function () {
-    var st = $('#out-status');
-    if (S.editing) { st.textContent = '请先保存或取消正在编辑的笔记'; return; }
-    try {
-      st.textContent = '正在加密…';
-      var b = await buildCurrentHtml();
-      downloadBlob(b.html, 'index.html', 'text/html;charset=utf-8');
-      afterExport();
-      st.textContent = '✓ 已生成 index.html（' + fmtMB(b.size) + ' MB）';
-    } catch (e) { st.textContent = '失败：' + e.message; }
-  });
+  $('#out-download').addEventListener('click', function () { downloadRelease(); });
   $('#imp-dir-btn').addEventListener('click', function () { $('#imp-dir').click(); });
   $('#imp-files-btn').addEventListener('click', function () { $('#imp-files').click(); });
   ['#imp-dir', '#imp-files'].forEach(function (s) {
@@ -1596,6 +1828,16 @@ function bind() {
     });
   });
   $('#exp-md').addEventListener('click', exportMarkdown);
+  $('#arch-gh').addEventListener('click', function () {
+    var y = +$('#arch-year').value; if (!y) return;
+    if (!confirm('把 ' + y + ' 年的全部笔记移到独立归档文件并立即发布到 GitHub？')) return;
+    switchTab('publish'); publishGithub(y);
+  });
+  $('#arch-dl').addEventListener('click', function () {
+    var y = +$('#arch-year').value; if (!y) return;
+    if (!confirm('把 ' + y + ' 年的全部笔记移到独立归档文件，并下载归档文件和新的主文件？之后需要把它们都上传到同一目录。')) return;
+    switchTab('publish'); downloadRelease(y);
+  });
 
   window.addEventListener('beforeunload', function (ev) {
     if (S.editing && editorChanged()) { ev.preventDefault(); ev.returnValue = ''; }
