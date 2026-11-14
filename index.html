@@ -177,6 +177,8 @@ button.chip{cursor:pointer}
 .form-grid .full{grid-column:1/-1}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .status{font-size:13px;color:var(--muted);margin-top:8px;min-height:20px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text);margin:4px 0 8px;cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--accent);margin:0}
 .note-box{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-top:10px}
 
 /* ===== 提示 ===== */
@@ -299,7 +301,7 @@ button.chip{cursor:pointer}
       <div data-panel="publish" hidden>
         <div class="sec">
           <h3>通道 A：GitHub API 一键发布</h3>
-          <p class="desc">配置仅保存在本设备浏览器的 localStorage，<b>Token 绝不会写入导出的 HTML</b>。建议使用只授权该仓库、仅 Contents 读写权限的 Fine-grained Token。</p>
+          <p class="desc">用户名、仓库等信息会加密同步进笔记本，换设备解锁后自动带出。<b>Token 默认只保存在本机</b>，绝不会以明文写入 HTML。建议使用只授权该仓库、仅 Contents 读写权限的 Fine-grained Token。</p>
           <div class="form-grid">
             <label>GitHub 用户名 / 组织<input type="text" id="gh-owner" autocomplete="off" spellcheck="false"></label>
             <label>仓库名<input type="text" id="gh-repo" autocomplete="off" spellcheck="false"></label>
@@ -307,6 +309,8 @@ button.chip{cursor:pointer}
             <label>文件路径<input type="text" id="gh-path" placeholder="index.html" autocomplete="off" spellcheck="false"></label>
             <label class="full">Personal Access Token<input type="password" id="gh-token" autocomplete="off" spellcheck="false" placeholder="ghp_… 或 github_pat_…"></label>
           </div>
+          <label class="chk" id="gh-sync-row"><input type="checkbox" id="gh-sync-token"> 把 Token 也加密同步到笔记本（换手机/浏览器解锁后免填）</label>
+          <p class="desc" style="margin-top:-4px">仓库信息总会加密同步。勾选后，Token 会用主密码加密写进 index.html，安全性取决于主密码强度；请确保 Token 只授权 notebook 这一个仓库。不勾选时 Token 只保存在本机。</p>
           <div class="row">
             <button class="btn" id="gh-save">保存配置</button>
             <button class="btn danger" id="gh-clear">清除本机配置</button>
@@ -547,12 +551,19 @@ function normalizeData(d) {
     meta: d.meta && d.meta.kind === 'archive' && ARCHIVE_NAME_RE.test(d.meta.selfFile || '')
       ? { kind: 'archive', year: +d.meta.year || 0, selfFile: d.meta.selfFile, mainFile: String(d.meta.mainFile || 'index.html') }
       : null,
+    publish: normPublish(d.publish),
     archives: (Array.isArray(d.archives) ? d.archives : []).filter(function (a) {
       return a && ARCHIVE_NAME_RE.test(a.file || '') && a.key && a.salt;
     }).map(function (a) {
       return { file: a.file, year: +a.year || 0, count: +a.count || 0, salt: String(a.salt), key: String(a.key), createdAt: +a.createdAt || 0 };
     })
   };
+}
+function normPublish(p) {
+  if (!p || typeof p !== 'object') return null;
+  var o = {};
+  ['owner', 'repo', 'branch', 'path', 'token'].forEach(function (k) { if (p[k]) o[k] = String(p[k]).trim(); });
+  return o.owner || o.repo || o.token ? o : null;
 }
 function isArchive() { return !!(S.data && S.data.meta && S.data.meta.kind === 'archive'); }
 function defaultData() {
@@ -809,13 +820,14 @@ function refsFor(notes, resources, extraText) {
 }
 function referencedResources(extraText) { return refsFor(S.data.notes, S.data.resources, extraText); }
 function editorText() { var ta = $('#ed-body'); return ta ? ta.value : ''; }
-function packData(notes, resources, meta, archives) {
+function packData(notes, resources, meta, archives, publish) {
   var d = { version: 1, notes: notes, resources: resources };
   if (meta) d.meta = meta;
   if (archives && archives.length) d.archives = archives;
+  if (publish) d.publish = publish;
   return d;
 }
-function snapshotData() { return packData(S.data.notes, referencedResources(editorText()), S.data.meta, S.data.archives); }
+function snapshotData() { return packData(S.data.notes, referencedResources(editorText()), S.data.meta, S.data.archives, S.data.publish); }
 function mainFileName() { return decodeURIComponent(location.pathname.split('/').pop() || '') || 'index.html'; }
 function noteYear(n) { return new Date(n.created).getFullYear(); }
 function assertNoToken(html) {
@@ -869,7 +881,7 @@ async function buildRelease(forceYear) {
     }
   }
   var mainData = plan && !plan.none
-    ? packData(plan.notes, plan.resources, null, plan.registry)
+    ? packData(plan.notes, plan.resources, null, plan.registry, S.data.publish)
     : snapshotData();
   return { plan: plan && !plan.none ? plan : null, mainData: mainData, archiveFiles: files };
 }
@@ -1464,9 +1476,24 @@ function exportMarkdown() {
 
 /* ---------------- GitHub 发布 ---------------- */
 var GH_MEM = null;   /* 浏览器禁止本地存储时，配置只保存在本次打开的页面内存中 */
+/* 生效配置 = 笔记本内同步的配置（加密存储） ← 本机 localStorage 覆盖 ← 本页内存覆盖 */
 function loadGh() {
-  if (GH_MEM) return GH_MEM;
-  try { return JSON.parse(lsGet(LS_GH) || '{}') || {}; } catch (e) { return {}; }
+  var local = {};
+  try { local = JSON.parse(lsGet(LS_GH) || '{}') || {}; } catch (e) {}
+  var synced = (S.data && S.data.publish) || {};
+  var g = Object.assign({}, synced, local, GH_MEM || {});
+  ['owner', 'repo', 'branch', 'path', 'token'].forEach(function (k) { if (!g[k]) g[k] = local[k] || synced[k] || (GH_MEM && GH_MEM[k]) || ''; });
+  return g;
+}
+/* 把仓库信息（以及勾选时的 Token）写入笔记本密文，换设备解锁后自动带出 */
+function syncPublishToVault(g, withToken) {
+  if (!S.data || isArchive()) return false;
+  var p = { owner: g.owner, repo: g.repo, branch: g.branch, path: g.path };
+  if (withToken && g.token) p.token = g.token;
+  var before = JSON.stringify(S.data.publish || null);
+  S.data.publish = normPublish(p);
+  if (JSON.stringify(S.data.publish || null) !== before) { markDirty(); return true; }
+  return false;
 }
 /* 读取表单并保存；表单里填了什么就以表单为准（Token 留空则沿用已保存的） */
 function saveGhFromForm(quiet) {
@@ -1482,9 +1509,13 @@ function saveGhFromForm(quiet) {
   if (miss.length) { st.textContent = '请填写：' + miss.join('、'); toast('请填写：' + miss.join('、'), 'err'); return null; }
   var ok = lsSet(LS_GH, JSON.stringify(g)) && lsGet(LS_GH) === JSON.stringify(g);
   GH_MEM = ok ? null : g;
+  var withToken = $('#gh-sync-token').checked;
+  var changed = syncPublishToVault(g, withToken);
   $('#gh-token').value = '';
   $('#gh-token').placeholder = ok ? '已保存在本机（留空保持不变）' : '已暂存在本页（关闭后需重新填写）';
-  var msg = ok ? '✓ 配置已保存到本设备（Token 不会写入导出的 HTML）' : '⚠️ 当前浏览器禁止本地存储（可能是无痕模式），配置只在本次打开的页面有效，关闭后需要重新填写';
+  var msg = (ok ? '✓ 配置已保存到本设备' : '⚠️ 当前浏览器禁止本地存储（可能是无痕模式），本机配置只在本次打开的页面有效') +
+    (isArchive() ? '' : (withToken ? '；仓库信息和 Token 已加密同步进笔记本' : '；仓库信息已加密同步进笔记本（Token 未同步，只在本机）') +
+      (changed ? '，发布后其他设备解锁即可自动带出' : ''));
   st.textContent = msg;
   if (!quiet) toast(ok ? '配置已保存' : '已暂存在本页（浏览器禁止本地存储）', ok ? 'ok' : 'err');
   return g;
@@ -1626,7 +1657,9 @@ function openSettings(tab) {
   $('#gh-branch').value = g.branch || '';
   $('#gh-path').value = g.path || '';
   $('#gh-token').value = '';
-  $('#gh-token').placeholder = g.token ? '已保存在本机（留空保持不变）' : 'ghp_… 或 github_pat_…';
+  $('#gh-token').placeholder = g.token ? '已保存（留空保持不变）' : 'ghp_… 或 github_pat_…';
+  $('#gh-sync-token').checked = !!(S.data.publish && S.data.publish.token);
+  $('#gh-sync-row').hidden = isArchive();
   ['#pw-cur', '#pw-new', '#pw-new2'].forEach(function (s) { $(s).value = ''; });
   $('#pw-status').textContent = '';
   var sec = $('#arch-sec');
@@ -1811,8 +1844,10 @@ function bind() {
   $('#pw-save').addEventListener('click', changePassword);
   $('#gh-save').addEventListener('click', function () { saveGhFromForm(false); });
   $('#gh-clear').addEventListener('click', function () {
-    if (!confirm('清除本设备保存的 GitHub 配置和 Token？')) return;
-    lsDel(LS_GH); GH_MEM = null; openSettings('publish'); $('#gh-status').textContent = '已清除';
+    if (!confirm('清除本设备保存的 GitHub 配置和 Token？如果笔记本里同步了 Token，也会一并移除（仓库信息保留，发布后生效）。')) return;
+    lsDel(LS_GH); GH_MEM = null;
+    if (S.data && S.data.publish && S.data.publish.token) { delete S.data.publish.token; markDirty(); }
+    openSettings('publish'); $('#gh-status').textContent = '已清除';
   });
   $('#gh-publish').addEventListener('click', function () { if (saveGhFromForm(true)) publishGithub(); });
   $('#out-copy').addEventListener('click', async function () {
