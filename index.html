@@ -179,6 +179,9 @@ button.chip{cursor:pointer}
 .status{font-size:13px;color:var(--muted);margin-top:8px;min-height:20px}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text);margin:4px 0 8px;cursor:pointer}
 .chk input{width:16px;height:16px;accent-color:var(--accent);margin:0}
+.snap-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--panel)}
+.snap-url{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all;margin-bottom:8px;color:var(--muted)}
+.snap-item .row .btn{padding:5px 10px;font-size:13px}
 .note-box{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-top:10px}
 
 /* ===== 提示 ===== */
@@ -234,6 +237,7 @@ button.chip{cursor:pointer}
     <div class="brand"><span class="brand-title" id="app-title">Encrypted Notebook</span><span class="dirty" id="dirty-flag" hidden title="有尚未发布/导出的修改（已加密暂存在本机）">● 未发布</span></div>
     <div class="top-actions">
       <button class="btn primary" id="btn-publish" title="重新加密全部笔记并发布到 GitHub"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg><span class="hide-sm" id="btn-publish-text">加密并发布</span></button>
+      <button class="icon-btn" id="btn-snap" title="网页快照封存（互联网档案馆）" aria-label="网页快照封存"><svg viewBox="0 0 24 24"><path d="M3 4h18v4H3z"/><path d="M5 8v12h14V8"/><path d="M12 11v6M9 14l3 3 3-3"/></svg></button>
       <button class="icon-btn" id="btn-settings" title="设置 / 导入导出" aria-label="设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       <button class="icon-btn" id="btn-theme" title="切换浅色/深色" aria-label="切换主题"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="icon-btn" id="btn-lock" title="锁定笔记本" aria-label="锁定"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
@@ -357,6 +361,23 @@ button.chip{cursor:pointer}
   </div>
 </div>
 
+<div class="modal" id="snap" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="snap-title" style="max-width:600px">
+    <div class="dialog-head"><h2 id="snap-title">网页快照封存</h2><button class="icon-btn" data-close aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="dialog-body">
+      <p class="desc" style="margin:4px 0 10px">把线上的加密页面交给公益档案馆永久保存。档案馆里存的是<b>密文</b>，任何人都看不到内容；即使将来域名和托管都失效，也能在档案馆里打开快照，用主密码解锁。</p>
+      <div class="banner" style="border-radius:9px;border:0;margin-bottom:12px"><span>建议在发布更新约 1 分钟后（至少 15 秒，等线上刷新）再点击封存，不要过于频繁提交。</span></div>
+      <div id="snap-list"></div>
+      <div class="note-box">
+        <b>Wayback Machine（web.archive.org）</b>：保存完整网页（含加密数据和解锁程序），快照可以直接打开解锁，推荐使用。<br>
+        <b>archive.today（archive.ph）</b>：通常会去掉网页里的脚本，快照多半只能看到锁屏外观、无法解锁，只作为“这个网址存在过”的辅助证明。<br>
+        取回原始文件：在 Wayback 历史版本里选一个时间点，把网址中的时间串后面加上 <code>id_</code>（例如 <code>/web/20261114120000id_/https://…</code>），就能下载未经改动的原始 index.html，双击即可使用。<br>
+        在 ufobook.pages.dev 打开本页再封存一次，可以把镜像地址也存进去。
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <input type="file" id="img-input" accept="image/*" multiple hidden>
 
@@ -409,6 +430,7 @@ var DEFAULT_GUIDE = [
 '- [ ] 每次大改后下载一份 `index.html` 存到网盘或 U 盘（文件本身就是加密的，放哪都安全）。',
 '- [ ] 定期「导出全部明文 Markdown 合集」，保存到**只有你能访问**的离线位置。',
 '- [ ] 主密码记在密码管理器或纸上。**忘记密码无法找回**，没有任何后门。',
+'- [ ] 发布重要更新后，点顶部「网页快照封存」按钮，把加密页面存进互联网档案馆（web.archive.org），作为不依赖任何托管平台的长期备份。',
 '- [x] 已阅读本指南',
 '',
 '## 四、从 Joplin 导入',
@@ -1648,6 +1670,43 @@ function setBusy(b) {
   $('#btn-publish-text').textContent = b ? '发布中…' : '加密并发布';
 }
 
+/* ---------------- 网页快照封存（Wayback Machine / archive.today） ---------------- */
+function snapshotTargets() {
+  var base = location.origin + location.pathname;
+  var list = [{ label: isArchive() ? (S.data.meta.year + ' 年归档（当前页面）') : '主笔记本（当前页面）', url: base }];
+  if (!isArchive()) {
+    S.data.archives.slice().sort(function (a, b) { return b.year - a.year; }).forEach(function (a) {
+      list.push({ label: a.year + ' 年归档', url: new URL(a.file, base).href });
+    });
+  }
+  return list;
+}
+function openSnap() {
+  if (!/^https?:$/.test(location.protocol) || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+    toast('请部署到线上域名后再使用快照封存', 'err'); return;
+  }
+  $('#snap-list').innerHTML = snapshotTargets().map(function (t, i) {
+    return '<div class="snap-item"><div style="font-weight:600;margin-bottom:2px">' + esc(t.label) + '</div>' +
+      '<div class="snap-url">' + esc(t.url) + '</div><div class="row">' +
+      '<button class="btn primary" data-snap="save" data-i="' + i + '">一键封存快照</button>' +
+      '<button class="btn" data-snap="history" data-i="' + i + '">查看历史版本</button>' +
+      '<button class="btn" data-snap="ph" data-i="' + i + '">archive.today 存档</button></div></div>';
+  }).join('');
+  $('#snap').hidden = false;
+}
+async function snapAction(kind, i) {
+  var t = snapshotTargets()[i]; if (!t) return;
+  var copied = await copyText(t.url);
+  var target = kind === 'save' ? 'https://web.archive.org/save/' + t.url
+    : kind === 'history' ? 'https://web.archive.org/web/*/' + t.url
+    : 'https://archive.ph/?url=' + encodeURIComponent(t.url);
+  var a = document.createElement('a');
+  a.href = target; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  document.body.appendChild(a); a.click(); a.remove();
+  if (kind === 'save') toast('已在新标签页提交 Wayback 封存' + (copied ? '，网址已复制' : '') + '；页面显示保存完成即成功', 'ok', 6000);
+  if (kind === 'ph') toast((copied ? '网址已复制，' : '') + '如未自动填入，请在 archive.ph 粘贴网址后点保存', 'ok', 6000);
+}
+
 /* ---------------- 设置弹窗 ---------------- */
 function openSettings(tab) {
   $('#set-title').value = S.title;
@@ -1741,6 +1800,12 @@ function bind() {
     location.reload();
   });
   $('#btn-settings').addEventListener('click', function () { openSettings(); });
+  $('#btn-snap').addEventListener('click', openSnap);
+  $('#snap').addEventListener('click', function (ev) {
+    if (ev.target === ev.currentTarget || ev.target.closest('[data-close]')) { $('#snap').hidden = true; return; }
+    var b = ev.target.closest('[data-snap]');
+    if (b) snapAction(b.getAttribute('data-snap'), +b.getAttribute('data-i'));
+  });
   $('#btn-publish').addEventListener('click', function () { publishGithub(); });
   $('#btn-new').addEventListener('click', function () {
     if (S.editing && editorChanged() && !confirm('放弃当前未保存的修改并新建笔记？')) return;
@@ -1824,7 +1889,8 @@ function bind() {
   document.addEventListener('keydown', function (ev) {
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 's' && S.editing) { ev.preventDefault(); saveEdit(); return; }
     if (ev.key === 'Escape') {
-      if (!$('#settings').hidden) closeSettings();
+      if (!$('#snap').hidden) $('#snap').hidden = true;
+      else if (!$('#settings').hidden) closeSettings();
       else if ($('#sidebar').classList.contains('open')) closeDrawer();
     }
   });
