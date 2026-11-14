@@ -1463,7 +1463,32 @@ function exportMarkdown() {
 }
 
 /* ---------------- GitHub 发布 ---------------- */
-function loadGh() { try { return JSON.parse(lsGet(LS_GH) || '{}') || {}; } catch (e) { return {}; } }
+var GH_MEM = null;   /* 浏览器禁止本地存储时，配置只保存在本次打开的页面内存中 */
+function loadGh() {
+  if (GH_MEM) return GH_MEM;
+  try { return JSON.parse(lsGet(LS_GH) || '{}') || {}; } catch (e) { return {}; }
+}
+/* 读取表单并保存；表单里填了什么就以表单为准（Token 留空则沿用已保存的） */
+function saveGhFromForm(quiet) {
+  var old = loadGh(), st = $('#gh-status');
+  var g = {
+    owner: $('#gh-owner').value.trim() || old.owner || '', repo: $('#gh-repo').value.trim() || old.repo || '',
+    branch: $('#gh-branch').value.trim() || old.branch || 'main',
+    path: ($('#gh-path').value.trim() || old.path || 'index.html').replace(/^\/+/, ''),
+    token: $('#gh-token').value.trim().replace(/\s+/g, '') || old.token || ''
+  };
+  var miss = [];
+  if (!g.owner) miss.push('用户名'); if (!g.repo) miss.push('仓库名'); if (!g.token) miss.push('Token');
+  if (miss.length) { st.textContent = '请填写：' + miss.join('、'); toast('请填写：' + miss.join('、'), 'err'); return null; }
+  var ok = lsSet(LS_GH, JSON.stringify(g)) && lsGet(LS_GH) === JSON.stringify(g);
+  GH_MEM = ok ? null : g;
+  $('#gh-token').value = '';
+  $('#gh-token').placeholder = ok ? '已保存在本机（留空保持不变）' : '已暂存在本页（关闭后需重新填写）';
+  var msg = ok ? '✓ 配置已保存到本设备（Token 不会写入导出的 HTML）' : '⚠️ 当前浏览器禁止本地存储（可能是无痕模式），配置只在本次打开的页面有效，关闭后需要重新填写';
+  st.textContent = msg;
+  if (!quiet) toast(ok ? '配置已保存' : '已暂存在本页（浏览器禁止本地存储）', ok ? 'ok' : 'err');
+  return g;
+}
 function encPath(p) { return p.split('/').filter(Boolean).map(encodeURIComponent).join('/'); }
 async function ghErr(r) {
   var msg = '';
@@ -1784,24 +1809,12 @@ function bind() {
     toast('公开标题已更新，发布后生效', 'ok');
   });
   $('#pw-save').addEventListener('click', changePassword);
-  $('#gh-save').addEventListener('click', function () {
-    var old = loadGh();
-    var g = {
-      owner: $('#gh-owner').value.trim(), repo: $('#gh-repo').value.trim(),
-      branch: $('#gh-branch').value.trim() || 'main', path: ($('#gh-path').value.trim() || 'index.html').replace(/^\/+/, ''),
-      token: $('#gh-token').value.trim() || old.token || ''
-    };
-    if (!g.owner || !g.repo || !g.token) { $('#gh-status').textContent = '用户名、仓库名和 Token 均为必填'; return; }
-    lsSet(LS_GH, JSON.stringify(g));
-    $('#gh-token').value = '';
-    $('#gh-token').placeholder = '已保存在本机（留空保持不变）';
-    $('#gh-status').textContent = '✓ 配置已保存到本设备（Token 不会写入导出的 HTML）';
-  });
+  $('#gh-save').addEventListener('click', function () { saveGhFromForm(false); });
   $('#gh-clear').addEventListener('click', function () {
     if (!confirm('清除本设备保存的 GitHub 配置和 Token？')) return;
-    lsDel(LS_GH); openSettings('publish'); $('#gh-status').textContent = '已清除';
+    lsDel(LS_GH); GH_MEM = null; openSettings('publish'); $('#gh-status').textContent = '已清除';
   });
-  $('#gh-publish').addEventListener('click', function () { publishGithub(); });
+  $('#gh-publish').addEventListener('click', function () { if (saveGhFromForm(true)) publishGithub(); });
   $('#out-copy').addEventListener('click', async function () {
     var st = $('#out-status');
     if (S.editing) { st.textContent = '请先保存或取消正在编辑的笔记'; return; }
